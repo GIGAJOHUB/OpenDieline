@@ -1,8 +1,8 @@
 import type { Preset, ReverseTuckEndParams } from "../types/carton";
 
 export const DEFAULT_RTE_PARAMS: ReverseTuckEndParams = {
-  length: 170,
-  width: 38,
+  panelAWidth: 38,
+  panelBWidth: 170,
   height: 48,
   boardThickness: 0.45,
   glueFlapWidth: 12,
@@ -15,8 +15,8 @@ export const DEFAULT_RTE_PARAMS: ReverseTuckEndParams = {
 };
 
 export const MIN_RTE_PARAMS: ReverseTuckEndParams = {
-  length: 40,
-  width: 15,
+  panelAWidth: 15,
+  panelBWidth: 40,
   height: 20,
   boardThickness: 0.2,
   glueFlapWidth: 8,
@@ -29,8 +29,8 @@ export const MIN_RTE_PARAMS: ReverseTuckEndParams = {
 };
 
 export const MAX_RTE_PARAMS: ReverseTuckEndParams = {
-  length: 320,
-  width: 120,
+  panelAWidth: 120,
+  panelBWidth: 320,
   height: 160,
   boardThickness: 1.2,
   glueFlapWidth: 24,
@@ -55,8 +55,8 @@ export const RTE_PRESETS: Preset[] = [
     description: "Compact carton for serum or boxed cosmetics",
     params: {
       ...DEFAULT_RTE_PARAMS,
-      length: 95,
-      width: 34,
+      panelAWidth: 34,
+      panelBWidth: 95,
       height: 34,
       tuckFlapDepth: 28,
       dustFlapDepth: 22,
@@ -68,8 +68,8 @@ export const RTE_PRESETS: Preset[] = [
     description: "Small medicine carton with conservative margins",
     params: {
       ...DEFAULT_RTE_PARAMS,
-      length: 120,
-      width: 28,
+      panelAWidth: 28,
+      panelBWidth: 120,
       height: 42,
       safeMargin: 5,
       glueFlapWidth: 10,

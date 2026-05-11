@@ -5,15 +5,15 @@ export const validateReverseTuckEnd = (
 ): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
 
-  if (params.length <= params.width) {
+  if (params.panelBWidth <= params.panelAWidth) {
     issues.push({
-      field: "length",
+      field: "panelBWidth",
       severity: "warning",
-      message: "Length is usually greater than width for toothpaste and retail RTE cartons.",
+      message: "Panel B is usually greater than Panel A for toothpaste and long retail RTE cartons.",
     });
   }
 
-  if (params.tuckFlapDepth < params.width * 0.45) {
+  if (params.tuckFlapDepth < params.panelAWidth * 0.45) {
     issues.push({
       field: "tuckFlapDepth",
       severity: "warning",
@@ -21,7 +21,7 @@ export const validateReverseTuckEnd = (
     });
   }
 
-  if (params.tuckFlapDepth > params.width + params.lockTongueDepth) {
+  if (params.tuckFlapDepth > params.panelAWidth + params.lockTongueDepth) {
     issues.push({
       field: "tuckFlapDepth",
       severity: "warning",

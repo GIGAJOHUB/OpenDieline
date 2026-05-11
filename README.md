@@ -7,9 +7,10 @@ The application is built as a lightweight CAD tool: all carton geometry is calcu
 ## Features
 
 - Parametric reverse tuck end carton generator
-- Customizable length, width, height, board thickness, glue flap, bleed, safe margin, tuck flap, dust flap, lock tongue, and manufacturing tolerance
+- Customizable Panel A width, Panel B width, height, board thickness, glue flap, bleed, safe margin, tuck flap, dust flap, lock tongue, and manufacturing tolerance
 - Real packaging conventions: 3 mm bleed default, 2-6 mm safe zones, 10-15 mm glue flap guidance, score-line semantics, and caliper/tolerance compensation
 - Zoomable and pannable SVG CAD viewport
+- Three.js fold preview with hinge-based fold interpolation
 - Dimension labels and manufacturing validation warnings
 - Export to SVG, PDF, and DXF
 - Clean TypeScript architecture separating geometry, rendering, templates, exporters, and UI
@@ -32,7 +33,7 @@ src/
   components/       UI controls and status display
   constants/        Packaging defaults, presets, and line styles
   exporters/        SVG, PDF, and DXF vector export pipeline
-  geometry/         CAD primitives, bounds, and constraints
+  geometry/         CAD primitives, topology, panels, flaps, folds, bounds, and constraints
   hooks/            Dieline state and generation hooks
   renderers/        SVG viewport renderer
   templates/        Parametric carton templates
@@ -59,6 +60,7 @@ npm run build
 
 The implemented carton includes:
 
+- Glue | A | B | A | B panel topology
 - Front panel
 - Back panel
 - Two side panels
@@ -72,6 +74,8 @@ The implemented carton includes:
 - Safe zones
 
 The layout follows an ECMA-style reverse tuck structure with top and bottom tuck closures placed on opposite major panels.
+
+The 3D fold preview derives from the same topology used for SVG/PDF/DXF output. Body panels, glue flap, dust flaps, and tuck flaps each have explicit parent-child fold relationships and hinge axes.
 
 ## Roadmap
 

@@ -1,8 +1,8 @@
 import type { Millimeters } from "./geometry";
 
 export type ReverseTuckEndParams = {
-  length: Millimeters;
-  width: Millimeters;
+  panelAWidth: Millimeters;
+  panelBWidth: Millimeters;
   height: Millimeters;
   boardThickness: Millimeters;
   glueFlapWidth: Millimeters;

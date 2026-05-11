@@ -3,7 +3,7 @@ import { DEFAULT_RTE_PARAMS, MAX_RTE_PARAMS, MIN_RTE_PARAMS, RTE_PRESETS } from 
 import { dxfBlob } from "../exporters/dxfExporter";
 import { pdfBlob } from "../exporters/pdfExporter";
 import { svgBlob } from "../exporters/svgExporter";
-import type { ReverseTuckEndParams, ValidationIssue } from "../types/carton";
+import type { ReverseTuckEndParams } from "../types/carton";
 import type { Dieline } from "../types/geometry";
 import { downloadBlob } from "../utils/download";
 
@@ -12,7 +12,7 @@ type Props = {
   setParams: (params: ReverseTuckEndParams) => void;
   updateParam: (key: keyof ReverseTuckEndParams, value: number) => void;
   dieline: Dieline;
-  issues: ValidationIssue[];
+  issues: Array<{ severity: "warning" | "error"; message: string; field?: keyof ReverseTuckEndParams }>;
 };
 
 const fields: Array<{
@@ -22,8 +22,8 @@ const fields: Array<{
   step: number;
   suffix: string;
 }> = [
-  { key: "length", label: "Box length", help: "Major front/back crease-to-crease dimension", step: 1, suffix: "mm" },
-  { key: "width", label: "Box width", help: "Side/depth crease-to-crease dimension", step: 1, suffix: "mm" },
+  { key: "panelAWidth", label: "Panel A width", help: "Linked minor side panels in Glue | A | B | A | B", step: 1, suffix: "mm" },
+  { key: "panelBWidth", label: "Panel B width", help: "Linked major front/back panels in Glue | A | B | A | B", step: 1, suffix: "mm" },
   { key: "height", label: "Box height", help: "Vertical body score-to-score dimension", step: 1, suffix: "mm" },
   { key: "boardThickness", label: "Board thickness", help: "Paperboard caliper used for compensation", step: 0.05, suffix: "mm" },
   { key: "glueFlapWidth", label: "Glue flap", help: "Manufacturer glue lap width", step: 0.5, suffix: "mm" },
