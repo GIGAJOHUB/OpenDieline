@@ -1,6 +1,6 @@
 import type { Line, Point, Polygon } from "../../types/geometry";
 
-export type CartonFaceKind = "body" | "glue" | "tuck" | "dust";
+export type CartonFaceKind = "body" | "glue" | "tuck" | "tongue" | "seal" | "dust";
 
 export type FoldAxisKind = "vertical-body" | "top-closure" | "bottom-closure" | "glue";
 

@@ -14,6 +14,13 @@ export type RtePanelSequence = {
   xRight: number;
 };
 
+const closureExtension = (params: ReverseTuckEndParams, end: "top" | "bottom"): number => {
+  const mainPanelDepth = params.panelAWidth + params.boardThickness + params.tolerance;
+  return params[end === "top" ? "topClosure" : "bottomClosure"] === "tuck"
+    ? mainPanelDepth + params.lockTongueDepth
+    : mainPanelDepth;
+};
+
 export const makeRtePanelSequence = (params: ReverseTuckEndParams): RtePanelSequence => {
   /*
    * A/B dimensions are crease-to-crease inputs. Caliper and tolerance are
@@ -23,7 +30,7 @@ export const makeRtePanelSequence = (params: ReverseTuckEndParams): RtePanelSequ
   const panelA = params.panelAWidth + params.boardThickness + params.tolerance;
   const panelB = params.panelBWidth + params.tolerance;
   const height = params.height + params.tolerance;
-  const bodyTop = params.tuckFlapDepth;
+  const bodyTop = Math.max(params.dustFlapDepth, closureExtension(params, "top"));
   const bodyBottom = bodyTop + height;
   const xGlue = 0;
   const xA1 = params.glueFlapWidth;

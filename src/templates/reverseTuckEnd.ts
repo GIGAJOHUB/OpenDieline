@@ -2,8 +2,10 @@ import type { ReverseTuckEndParams } from "../types/carton";
 import type { Dieline, DimensionLabel, Line, Polygon } from "../types/geometry";
 import { line, point, polygon, polygonToLines } from "../geometry/primitives/point";
 import type { CartonFace, CartonFold, CartonTopology } from "../geometry/topology/cartonTopology";
-import { makeRteDustFlap, makeRteTuckFlap } from "../geometry/flaps/rteFlaps";
+import { makeRteDustFlap } from "../geometry/flaps/rteFlaps";
 import { makeRtePanelSequence } from "../geometry/panels/panelSequence";
+import { generateTuckClosure } from "../geometry/closures/tuck/generateTuckClosure";
+import { generateGlueClosure } from "../geometry/closures/glue/generateGlueClosure";
 
 type RteGeneration = {
   dieline: Dieline;
@@ -24,6 +26,18 @@ const rect = (id: string, x: number, y: number, width: number, height: number, l
 
 const foldLine = (id: string, x1: number, y1: number, x2: number, y2: number, label: string): Line =>
   line(id, point(x1, y1), point(x2, y2), "fold", label);
+
+const samePoint = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
+
+const sameSegment = (lineA: Line, lineB: Line) =>
+  (samePoint(lineA.start, lineB.start) && samePoint(lineA.end, lineB.end)) ||
+  (samePoint(lineA.start, lineB.end) && samePoint(lineA.end, lineB.start));
+
+const cutLinesForPolygon = (poly: Polygon, excludedFoldSegments: Line[], idPrefix = poly.id): Line[] =>
+  polygonToLines(poly, "cut", idPrefix).filter(
+    (candidate) => !excludedFoldSegments.some((fold) => sameSegment(candidate, fold)),
+  );
 
 const makeFace = (
   id: string,
@@ -107,65 +121,144 @@ export const generateReverseTuckEnd = (params: ReverseTuckEndParams): RteGenerat
   const a1 = rect("panel-a-left", xA1, bodyTop, panelA, height, "Panel A left side");
   const b1 = rect("panel-b-front", xB1, bodyTop, panelB, height, "Panel B front");
   const a2 = rect("panel-a-right", xA2, bodyTop, panelA, height, "Panel A right side");
-  const b2 = rect("panel-b-back", xB2, bodyTop, panelB, height, "Panel B back");
+  const b2 = rect("panel-b-back", xB2, bodyTop, panelB, height, "Panel D back");
   const topDustA1 = makeRteDustFlap("top-dust-a-left", xA1, bodyTop, panelA, params.dustFlapDepth, "top", "Top dust flap A left");
-  const topTuckBack = makeRteTuckFlap("top-tuck-b-back", xB2, bodyTop, panelB, params.tuckFlapDepth, params.lockTongueDepth, "top", "Top reverse tuck flap");
   const topDustA2 = makeRteDustFlap("top-dust-a-right", xA2, bodyTop, panelA, params.dustFlapDepth, "top", "Top dust flap A right");
   const bottomDustA1 = makeRteDustFlap("bottom-dust-a-left", xA1, bodyBottom, panelA, params.dustFlapDepth, "bottom", "Bottom dust flap A left");
-  const bottomTuckFront = makeRteTuckFlap("bottom-tuck-b-front", xB1, bodyBottom, panelB, params.tuckFlapDepth, params.lockTongueDepth, "bottom", "Bottom reverse tuck flap");
   const bottomDustA2 = makeRteDustFlap("bottom-dust-a-right", xA2, bodyBottom, panelA, params.dustFlapDepth, "bottom", "Bottom dust flap A right");
+  const topClosure =
+    params.topClosure === "tuck"
+      ? generateTuckClosure({
+          idPrefix: "top-tuck-b-front",
+          x: xB1,
+          creaseY: bodyTop,
+          panelWidth: panelB,
+          closureDepth: panelA,
+          lockTongueDepth: params.lockTongueDepth,
+          end: "top",
+          label: "Top Panel B tuck closure",
+        })
+      : generateGlueClosure({
+          idPrefix: "top-glue-b-front",
+          x: xB1,
+          creaseY: bodyTop,
+          panelWidth: panelB,
+          closureDepth: panelA,
+          end: "top",
+          label: "Top Panel B glued closure",
+        });
+  const bottomClosure =
+    params.bottomClosure === "tuck"
+      ? generateTuckClosure({
+          idPrefix: "bottom-tuck-d-back",
+          x: xB2,
+          creaseY: bodyBottom,
+          panelWidth: panelB,
+          closureDepth: panelA,
+          lockTongueDepth: params.lockTongueDepth,
+          end: "bottom",
+          label: "Bottom Panel D tuck closure",
+        })
+      : generateGlueClosure({
+          idPrefix: "bottom-glue-d-back",
+          x: xB2,
+          creaseY: bodyBottom,
+          panelWidth: panelB,
+          closureDepth: panelA,
+          end: "bottom",
+          label: "Bottom Panel D glued closure",
+        });
 
   const panels = [a1, b1, a2, b2];
-  const flaps = [topDustA1, topTuckBack, topDustA2, bottomDustA1, bottomTuckFront, bottomDustA2];
+  const closurePolygons =
+    "mainPanel" in topClosure
+      ? [topClosure.mainPanel, topClosure.tongue]
+      : [topClosure.panel];
+  const bottomClosurePolygons =
+    "mainPanel" in bottomClosure
+      ? [bottomClosure.mainPanel, bottomClosure.tongue]
+      : [bottomClosure.panel];
+  const flaps = [topDustA1, ...closurePolygons, topDustA2, bottomDustA1, bottomDustA2, ...bottomClosurePolygons];
+  const foldCandidates = [
+    foldLine("fold-glue-to-a", xA1, bodyTop, xA1, bodyBottom, "Glue flap to A score"),
+    foldLine("fold-a-left-to-b-front", xB1, bodyTop, xB1, bodyBottom, "A left to B front score"),
+    foldLine("fold-b-front-to-a-right", xA2, bodyTop, xA2, bodyBottom, "B front to C side score"),
+    foldLine("fold-a-right-to-b-back", xB2, bodyTop, xB2, bodyBottom, "C side to D back score"),
+    foldLine("fold-top-dust-a-left", xA1, bodyTop, xB1, bodyTop, "Top dust A score"),
+    ...topClosure.foldLines,
+    foldLine("fold-top-dust-a-right", xA2, bodyTop, xB2, bodyTop, "Top dust C score"),
+    foldLine("fold-bottom-dust-a-left", xA1, bodyBottom, xB1, bodyBottom, "Bottom dust A score"),
+    foldLine("fold-bottom-dust-a-right", xA2, bodyBottom, xB2, bodyBottom, "Bottom dust C score"),
+    ...bottomClosure.foldLines,
+  ];
   const cuts = [
-    ...polygonToLines(glue, "cut", "cut-glue"),
-    ...flaps.flatMap((flap) => polygonToLines(flap, "cut", `cut-${flap.id}`)),
-    line("cut-top-front-open", point(xB1, bodyTop), point(xA2, bodyTop), "cut", "Top front open edge"),
-    line("cut-bottom-back-open", point(xB2, bodyBottom), point(xRight, bodyBottom), "cut", "Bottom back open edge"),
+    ...cutLinesForPolygon(glue, [foldCandidates[0]], "cut-glue"),
+    ...flaps.flatMap((flap) => cutLinesForPolygon(flap, foldCandidates, `cut-${flap.id}`)),
+    line("cut-top-d-back-open", point(xB2, bodyTop), point(xRight, bodyTop), "cut", "Panel D top straight cut"),
+    line("cut-bottom-b-front-open", point(xB1, bodyBottom), point(xA2, bodyBottom), "cut", "Panel B bottom straight cut"),
     line("cut-right-body", point(xRight, bodyTop), point(xRight, bodyBottom), "cut", "Back panel outside cut"),
   ];
 
-  const folds = [
-    foldLine("fold-glue-to-a", xA1, bodyTop, xA1, bodyBottom, "Glue flap to A score"),
-    foldLine("fold-a-left-to-b-front", xB1, bodyTop, xB1, bodyBottom, "A left to B front score"),
-    foldLine("fold-b-front-to-a-right", xA2, bodyTop, xA2, bodyBottom, "B front to A right score"),
-    foldLine("fold-a-right-to-b-back", xB2, bodyTop, xB2, bodyBottom, "A right to B back score"),
-    foldLine("fold-top-dust-a-left", xA1, bodyTop, xB1, bodyTop, "Top dust A left score"),
-    foldLine("fold-top-dust-a-right", xA2, bodyTop, xB2, bodyTop, "Top dust A right score"),
-    foldLine("fold-top-tuck-back", xB2, bodyTop, xRight, bodyTop, "Top tuck back score"),
-    foldLine("fold-bottom-dust-a-left", xA1, bodyBottom, xB1, bodyBottom, "Bottom dust A left score"),
-    foldLine("fold-bottom-tuck-front", xB1, bodyBottom, xA2, bodyBottom, "Bottom tuck front score"),
-    foldLine("fold-bottom-dust-a-right", xA2, bodyBottom, xB2, bodyBottom, "Bottom dust A right score"),
-  ];
+  const folds = foldCandidates;
 
   const topFold = (id: string) => folds.find((fold) => fold.id === id)!;
+  const isTopTuck = "mainPanel" in topClosure;
+  const isBottomTuck = "mainPanel" in bottomClosure;
+  const topClosureMainId = isTopTuck ? topClosure.mainPanel.id : topClosure.panel.id;
+  const bottomClosureMainId = isBottomTuck ? bottomClosure.mainPanel.id : bottomClosure.panel.id;
   const faces: CartonFace[] = [
     makeFace("glue", "Glue flap", "glue", glue, params.glueFlapWidth, height, { parentId: "panel-a-left", foldId: "fold-glue-to-a", panelRole: "glue" }),
     makeFace("panel-a-left", "Panel A left side", "body", a1, panelA, height, { parentId: "panel-b-front", foldId: "fold-a-left-to-b-front", panelRole: "A" }),
     makeFace("panel-b-front", "Panel B front", "body", b1, panelB, height, { panelRole: "B" }),
     makeFace("panel-a-right", "Panel A right side", "body", a2, panelA, height, { parentId: "panel-b-front", foldId: "fold-b-front-to-a-right", panelRole: "A" }),
-    makeFace("panel-b-back", "Panel B back", "body", b2, panelB, height, { parentId: "panel-a-right", foldId: "fold-a-right-to-b-back", panelRole: "B" }),
+    makeFace("panel-b-back", "Panel D back", "body", b2, panelB, height, { parentId: "panel-a-right", foldId: "fold-a-right-to-b-back", panelRole: "B" }),
     makeFace("top-dust-a-left", "Top dust flap A left", "dust", topDustA1, panelA, params.dustFlapDepth, { parentId: "panel-a-left", foldId: "fold-top-dust-a-left" }),
     makeFace("top-dust-a-right", "Top dust flap A right", "dust", topDustA2, panelA, params.dustFlapDepth, { parentId: "panel-a-right", foldId: "fold-top-dust-a-right" }),
-    makeFace("top-tuck-b-back", "Top tuck flap B back", "tuck", topTuckBack, panelB, params.tuckFlapDepth, { parentId: "panel-b-back", foldId: "fold-top-tuck-back" }),
+    makeFace(topClosureMainId, params.topClosure === "tuck" ? "Top tuck closure B front" : "Top glue closure B front", params.topClosure === "tuck" ? "tuck" : "seal", isTopTuck ? topClosure.mainPanel : topClosure.panel, panelB, panelA, { parentId: "panel-b-front", foldId: isTopTuck ? "top-tuck-b-front-score" : "top-glue-b-front-score" }),
+    ...(isTopTuck
+      ? [
+          makeFace(topClosure.tongue.id, "Top lock tongue B front", "tongue", topClosure.tongue, panelB, params.lockTongueDepth, {
+            parentId: topClosure.mainPanel.id,
+            foldId: "top-tuck-b-front-tongue-score",
+          }),
+        ]
+      : []),
     makeFace("bottom-dust-a-left", "Bottom dust flap A left", "dust", bottomDustA1, panelA, params.dustFlapDepth, { parentId: "panel-a-left", foldId: "fold-bottom-dust-a-left" }),
     makeFace("bottom-dust-a-right", "Bottom dust flap A right", "dust", bottomDustA2, panelA, params.dustFlapDepth, { parentId: "panel-a-right", foldId: "fold-bottom-dust-a-right" }),
-    makeFace("bottom-tuck-b-front", "Bottom tuck flap B front", "tuck", bottomTuckFront, panelB, params.tuckFlapDepth, { parentId: "panel-b-front", foldId: "fold-bottom-tuck-front" }),
+    makeFace(bottomClosureMainId, params.bottomClosure === "tuck" ? "Bottom tuck closure D back" : "Bottom glue closure D back", params.bottomClosure === "tuck" ? "tuck" : "seal", isBottomTuck ? bottomClosure.mainPanel : bottomClosure.panel, panelB, panelA, { parentId: "panel-b-back", foldId: isBottomTuck ? "bottom-tuck-d-back-score" : "bottom-glue-d-back-score" }),
+    ...(isBottomTuck
+      ? [
+          makeFace(bottomClosure.tongue.id, "Bottom lock tongue D back", "tongue", bottomClosure.tongue, panelB, params.lockTongueDepth, {
+            parentId: bottomClosure.mainPanel.id,
+            foldId: "bottom-tuck-d-back-tongue-score",
+          }),
+        ]
+      : []),
   ];
 
   const topology: CartonTopology = {
     faces,
     folds: [
       makeFold("fold-a-left-to-b-front", "A left to B front", topFold("fold-a-left-to-b-front"), "vertical-body", "panel-b-front", "panel-a-left", Math.PI / 2, 1),
-      makeFold("fold-b-front-to-a-right", "B front to A right", topFold("fold-b-front-to-a-right"), "vertical-body", "panel-b-front", "panel-a-right", -Math.PI / 2, -1),
-      makeFold("fold-a-right-to-b-back", "A right to B back", topFold("fold-a-right-to-b-back"), "vertical-body", "panel-a-right", "panel-b-back", -Math.PI / 2, -1),
+      makeFold("fold-b-front-to-a-right", "B front to C side", topFold("fold-b-front-to-a-right"), "vertical-body", "panel-b-front", "panel-a-right", Math.PI / 2, -1),
+      makeFold("fold-a-right-to-b-back", "C side to D back", topFold("fold-a-right-to-b-back"), "vertical-body", "panel-a-right", "panel-b-back", Math.PI / 2, -1),
       makeFold("fold-glue-to-a", "Glue to A", topFold("fold-glue-to-a"), "glue", "panel-a-left", "glue", Math.PI / 2, 1),
       makeFold("fold-top-dust-a-left", "Top dust A left", topFold("fold-top-dust-a-left"), "top-closure", "panel-a-left", "top-dust-a-left", Math.PI / 2, 1),
       makeFold("fold-top-dust-a-right", "Top dust A right", topFold("fold-top-dust-a-right"), "top-closure", "panel-a-right", "top-dust-a-right", Math.PI / 2, 1),
-      makeFold("fold-top-tuck-back", "Top tuck B back", topFold("fold-top-tuck-back"), "top-closure", "panel-b-back", "top-tuck-b-back", Math.PI / 2, 1),
+      makeFold(isTopTuck ? "top-tuck-b-front-score" : "top-glue-b-front-score", "Top closure B front", topFold(isTopTuck ? "top-tuck-b-front-score" : "top-glue-b-front-score"), "top-closure", "panel-b-front", topClosureMainId, Math.PI / 2, 1),
+      ...(isTopTuck
+        ? [
+            makeFold("top-tuck-b-front-tongue-score", "Top lock tongue B front", topFold("top-tuck-b-front-tongue-score"), "top-closure", topClosure.mainPanel.id, topClosure.tongue.id, Math.PI / 2, 1),
+          ]
+        : []),
       makeFold("fold-bottom-dust-a-left", "Bottom dust A left", topFold("fold-bottom-dust-a-left"), "bottom-closure", "panel-a-left", "bottom-dust-a-left", Math.PI / 2, -1),
       makeFold("fold-bottom-dust-a-right", "Bottom dust A right", topFold("fold-bottom-dust-a-right"), "bottom-closure", "panel-a-right", "bottom-dust-a-right", Math.PI / 2, -1),
-      makeFold("fold-bottom-tuck-front", "Bottom tuck B front", topFold("fold-bottom-tuck-front"), "bottom-closure", "panel-b-front", "bottom-tuck-b-front", Math.PI / 2, -1),
+      makeFold(isBottomTuck ? "bottom-tuck-d-back-score" : "bottom-glue-d-back-score", "Bottom closure D back", topFold(isBottomTuck ? "bottom-tuck-d-back-score" : "bottom-glue-d-back-score"), "bottom-closure", "panel-b-back", bottomClosureMainId, Math.PI / 2, -1),
+      ...(isBottomTuck
+        ? [
+            makeFold("bottom-tuck-d-back-tongue-score", "Bottom lock tongue D back", topFold("bottom-tuck-d-back-tongue-score"), "bottom-closure", bottomClosure.mainPanel.id, bottomClosure.tongue.id, Math.PI / 2, -1),
+          ]
+        : []),
     ],
     bodyFaceIds: ["panel-a-left", "panel-b-front", "panel-a-right", "panel-b-back"],
     glueFaceId: "glue",

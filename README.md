@@ -11,6 +11,8 @@ The application is built as a lightweight CAD tool: all carton geometry is calcu
 - Real packaging conventions: 3 mm bleed default, 2-6 mm safe zones, 10-15 mm glue flap guidance, score-line semantics, and caliper/tolerance compensation
 - Zoomable and pannable SVG CAD viewport
 - Three.js fold preview with hinge-based fold interpolation
+- Configurable top and bottom closure modes: tuck or glue
+- Keyboard history: `Ctrl+Z` undo and `Ctrl+Shift+Z` redo
 - Dimension labels and manufacturing validation warnings
 - Export to SVG, PDF, and DXF
 - Clean TypeScript architecture separating geometry, rendering, templates, exporters, and UI
@@ -61,6 +63,7 @@ npm run build
 The implemented carton includes:
 
 - Glue | A | B | A | B panel topology
+- Correct RTE assignment: Panel B top tuck, Panel D bottom tuck
 - Front panel
 - Back panel
 - Two side panels
@@ -76,6 +79,8 @@ The implemented carton includes:
 The layout follows an ECMA-style reverse tuck structure with top and bottom tuck closures placed on opposite major panels.
 
 The 3D fold preview derives from the same topology used for SVG/PDF/DXF output. Body panels, glue flap, dust flaps, and tuck flaps each have explicit parent-child fold relationships and hinge axes.
+
+Closure modes are independently configurable per end. Tuck mode generates a main closure panel plus a hinged lock tongue. Glue mode generates a straight-cut sealing panel with no tongue score while preserving dust flaps.
 
 ## Roadmap
 

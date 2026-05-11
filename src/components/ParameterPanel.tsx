@@ -1,5 +1,5 @@
 import { Download, FileCode2, FileText, PackageCheck, RotateCcw } from "lucide-react";
-import { DEFAULT_RTE_PARAMS, MAX_RTE_PARAMS, MIN_RTE_PARAMS, RTE_PRESETS } from "../constants/packaging";
+import { DEFAULT_RTE_PARAMS, MAX_RTE_PARAMS, RTE_PRESETS } from "../constants/packaging";
 import { dxfBlob } from "../exporters/dxfExporter";
 import { pdfBlob } from "../exporters/pdfExporter";
 import { svgBlob } from "../exporters/svgExporter";
@@ -10,13 +10,17 @@ import { downloadBlob } from "../utils/download";
 type Props = {
   params: ReverseTuckEndParams;
   setParams: (params: ReverseTuckEndParams) => void;
-  updateParam: (key: keyof ReverseTuckEndParams, value: number) => void;
+  updateParam: (key: keyof ReverseTuckEndParams, value: ReverseTuckEndParams[keyof ReverseTuckEndParams]) => void;
   dieline: Dieline;
   issues: Array<{ severity: "warning" | "error"; message: string; field?: keyof ReverseTuckEndParams }>;
 };
 
+type NumericParamKey = {
+  [K in keyof ReverseTuckEndParams]: ReverseTuckEndParams[K] extends number ? K : never;
+}[keyof ReverseTuckEndParams];
+
 const fields: Array<{
-  key: keyof ReverseTuckEndParams;
+  key: NumericParamKey;
   label: string;
   help: string;
   step: number;
@@ -29,7 +33,7 @@ const fields: Array<{
   { key: "glueFlapWidth", label: "Glue flap", help: "Manufacturer glue lap width", step: 0.5, suffix: "mm" },
   { key: "bleed", label: "Bleed", help: "Print bleed guide outside cutting geometry", step: 0.5, suffix: "mm" },
   { key: "safeMargin", label: "Safe margin", help: "Artwork safe zone inside panels", step: 0.5, suffix: "mm" },
-  { key: "tuckFlapDepth", label: "Tuck flap", help: "Major closure flap depth including locking tongue", step: 1, suffix: "mm" },
+  { key: "tuckFlapDepth", label: "Main closure depth", help: "Linked to Panel A so the closure spans the box depth", step: 1, suffix: "mm" },
   { key: "dustFlapDepth", label: "Dust flap", help: "Minor side flap closure depth", step: 1, suffix: "mm" },
   { key: "lockTongueDepth", label: "Lock tongue", help: "Insertion tongue depth on tuck flaps", step: 0.5, suffix: "mm" },
   { key: "tolerance", label: "Tolerance", help: "Manufacturing fit allowance", step: 0.1, suffix: "mm" },
@@ -70,8 +74,26 @@ export const ParameterPanel = ({ params, setParams, updateParam, dieline, issues
         </div>
 
         <div className="space-y-4">
+          <div className="rounded border border-slate-200 p-3">
+            <p className="mb-2 text-sm font-semibold text-ink">Closure system</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["topClosure", "bottomClosure"] as const).map((key) => (
+                <label key={key} className="text-xs font-semibold text-steel">
+                  {key === "topClosure" ? "Top end" : "Bottom end"}
+                  <select
+                    value={params[key]}
+                    onChange={(event) => updateParam(key, event.target.value as ReverseTuckEndParams[typeof key])}
+                    className="mt-1 w-full rounded border border-slate-200 bg-white px-2 py-2 text-sm font-semibold text-ink outline-none focus:border-ink"
+                  >
+                    <option value="tuck">Tuck closure</option>
+                    <option value="glue">Glue closure</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
           {fields.map((field) => {
-            const min = MIN_RTE_PARAMS[field.key];
+            const min = 0;
             const max = MAX_RTE_PARAMS[field.key];
             const value = params[field.key];
             return (

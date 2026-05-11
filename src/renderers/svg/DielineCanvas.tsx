@@ -1,12 +1,14 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize2, Minus, Plus } from "lucide-react";
+import { Box, Maximize2, Minus, Plus } from "lucide-react";
 import { LINE_STYLES } from "../../constants/packaging";
 import { boundsForDieline } from "../../geometry/primitives/bounds";
 import type { Dieline, Line, Point, Polygon } from "../../types/geometry";
 
 type Props = {
   dieline: Dieline;
+  onToggle3d: () => void;
+  is3dOpen: boolean;
 };
 
 type ViewBox = {
@@ -51,7 +53,7 @@ const Dimension = ({ start, end, text }: { start: Point; end: Point; text: strin
   );
 };
 
-export const DielineCanvas = ({ dieline }: Props) => {
+export const DielineCanvas = ({ dieline, onToggle3d, is3dOpen }: Props) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const natural = useMemo(() => boundsForDieline(dieline, 18), [dieline]);
   const naturalViewBox = useMemo(
@@ -106,6 +108,9 @@ export const DielineCanvas = ({ dieline }: Props) => {
           </button>
           <button className="tool-button" onClick={() => setViewBox(naturalViewBox)} title="Fit to view" aria-label="Fit to view">
             <Maximize2 size={16} />
+          </button>
+          <button className="tool-button" onClick={onToggle3d} title="Toggle 3D preview" aria-label="Toggle 3D preview">
+            <Box size={16} className={is3dOpen ? "text-fold" : undefined} />
           </button>
         </div>
       </div>

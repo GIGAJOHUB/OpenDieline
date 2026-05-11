@@ -12,6 +12,15 @@ export type ReverseTuckEndParams = {
   dustFlapDepth: Millimeters;
   lockTongueDepth: Millimeters;
   tolerance: Millimeters;
+  topClosure: ClosureType;
+  bottomClosure: ClosureType;
+};
+
+export type ClosureType = "tuck" | "glue";
+
+export type CartonClosures = {
+  top: ClosureType;
+  bottom: ClosureType;
 };
 
 export type ValidationIssue = {

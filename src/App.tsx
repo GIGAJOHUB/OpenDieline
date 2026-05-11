@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ParameterPanel } from "./components/ParameterPanel";
 import { StatusBar } from "./components/StatusBar";
 import { DielineCanvas } from "./renderers/svg/DielineCanvas";
@@ -6,6 +7,7 @@ import { useDieline } from "./hooks/useDieline";
 
 export const App = () => {
   const { params, setParams, updateParam, dieline, topology, issues } = useDieline();
+  const [is3dOpen, setIs3dOpen] = useState(false);
 
   return (
     <main className="flex h-screen flex-col bg-mist text-ink">
@@ -19,8 +21,12 @@ export const App = () => {
         />
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="relative flex min-h-0 flex-1">
-            <DielineCanvas dieline={dieline} />
-            <FoldPreview topology={topology} />
+            <DielineCanvas
+              dieline={dieline}
+              is3dOpen={is3dOpen}
+              onToggle3d={() => setIs3dOpen((open) => !open)}
+            />
+            {is3dOpen && <FoldPreview topology={topology} onClose={() => setIs3dOpen(false)} />}
           </div>
           <StatusBar dieline={dieline} />
         </div>

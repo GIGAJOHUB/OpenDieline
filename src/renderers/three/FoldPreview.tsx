@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, RotateCcw } from "lucide-react";
+import { Box, RotateCcw, X } from "lucide-react";
 import * as THREE from "three";
 import type { CartonFace, CartonFold, CartonTopology } from "../../geometry/topology/cartonTopology";
 import type { Point, Polygon } from "../../types/geometry";
 
 type Props = {
   topology: CartonTopology;
+  onClose: () => void;
 };
 
 type FoldNode = {
@@ -31,7 +32,16 @@ const makeFaceMesh = (face: CartonFace, origin: THREE.Vector3, topology: CartonT
   const geometry = new THREE.ShapeGeometry(polygonShape(face.polygon, origin.clone(), topology));
   geometry.rotateX(-Math.PI / 2);
   const material = new THREE.MeshStandardMaterial({
-    color: face.kind === "body" ? 0xf7fafb : face.kind === "glue" ? 0xffcf70 : face.kind === "tuck" ? 0xe9f2ff : 0xf2f7ff,
+    color:
+      face.kind === "body"
+        ? 0xf7fafb
+        : face.kind === "glue" || face.kind === "seal"
+          ? 0xffcf70
+          : face.kind === "tongue"
+            ? 0xdfeeff
+            : face.kind === "tuck"
+              ? 0xe9f2ff
+              : 0xf2f7ff,
     roughness: 0.78,
     metalness: 0.02,
     side: THREE.DoubleSide,
@@ -68,7 +78,13 @@ const foldProgress = (progress: number, fold: CartonFold): number => {
   return Math.max(0, Math.min(1, (progress - 0.65) / 0.35));
 };
 
-export const FoldPreview = ({ topology }: Props) => {
+const topologyCenter = (topology: CartonTopology): THREE.Vector3 => {
+  const points = topology.faces.flatMap((face) => face.polygon.points.map((point) => flatTo3(point, topology)));
+  const box = new THREE.Box3().setFromPoints(points);
+  return box.getCenter(new THREE.Vector3());
+};
+
+export const FoldPreview = ({ topology, onClose }: Props) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -88,8 +104,8 @@ export const FoldPreview = ({ topology }: Props) => {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf4f7f8);
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 2000);
-    camera.position.set(topology.panelBWidth * 0.95, -bodySize * 2.2, bodySize * 1.25);
-    camera.lookAt(topology.panelBWidth * 0.75, topology.panelAWidth * 0.1, topology.height * 0.45);
+    camera.position.set(bodySize * 0.95, -bodySize * 2.25, bodySize * 1.05);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -102,7 +118,7 @@ export const FoldPreview = ({ topology }: Props) => {
     scene.add(ambient, key);
 
     const root = new THREE.Group();
-    root.position.set(-topology.sequence[2].x - topology.panelBWidth / 2, 0, -topology.height / 2);
+    root.position.copy(topologyCenter(topology).multiplyScalar(-1));
     scene.add(root);
 
     const faceMap = new Map(topology.faces.map((face) => [face.id, face]));
@@ -192,7 +208,7 @@ export const FoldPreview = ({ topology }: Props) => {
   }, [progress, topology.folds]);
 
   return (
-    <section className="absolute right-5 top-5 hidden w-[320px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-panel xl:block">
+    <section className="absolute right-5 top-5 z-10 w-[320px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-panel">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div className="flex items-center gap-2">
           <Box size={18} className="text-ink" />
@@ -201,9 +217,14 @@ export const FoldPreview = ({ topology }: Props) => {
             <p className="text-xs text-steel">Topology-driven hinge preview</p>
           </div>
         </div>
-        <button className="tool-button" onClick={() => setProgress(0)} title="Open flat" aria-label="Open flat">
-          <RotateCcw size={15} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="tool-button" onClick={() => setProgress(0)} title="Open flat" aria-label="Open flat">
+            <RotateCcw size={15} />
+          </button>
+          <button className="tool-button" onClick={onClose} title="Close preview" aria-label="Close preview">
+            <X size={15} />
+          </button>
+        </div>
       </div>
       <div ref={mountRef} className="h-[240px] bg-mist" />
       <div className="border-t border-slate-200 px-4 py-3">

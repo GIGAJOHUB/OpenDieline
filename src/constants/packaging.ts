@@ -1,31 +1,35 @@
 import type { Preset, ReverseTuckEndParams } from "../types/carton";
 
 export const DEFAULT_RTE_PARAMS: ReverseTuckEndParams = {
-  panelAWidth: 38,
-  panelBWidth: 170,
-  height: 48,
-  boardThickness: 0.45,
-  glueFlapWidth: 12,
+  panelAWidth: 35,
+  panelBWidth: 45,
+  height: 170,
+  boardThickness: 0.4,
+  glueFlapWidth: 15,
   bleed: 3,
-  safeMargin: 4,
-  tuckFlapDepth: 34,
-  dustFlapDepth: 26,
-  lockTongueDepth: 15,
-  tolerance: 0.6,
+  safeMargin: 3,
+  tuckFlapDepth: 35,
+  dustFlapDepth: 20,
+  lockTongueDepth: 14,
+  tolerance: 0.5,
+  topClosure: "tuck",
+  bottomClosure: "tuck",
 };
 
 export const MIN_RTE_PARAMS: ReverseTuckEndParams = {
   panelAWidth: 15,
   panelBWidth: 40,
   height: 20,
-  boardThickness: 0.2,
-  glueFlapWidth: 8,
+  boardThickness: 0,
+  glueFlapWidth: 0,
   bleed: 0,
-  safeMargin: 1,
-  tuckFlapDepth: 8,
-  dustFlapDepth: 6,
-  lockTongueDepth: 4,
+  safeMargin: 0,
+  tuckFlapDepth: 0,
+  dustFlapDepth: 0,
+  lockTongueDepth: 0,
   tolerance: 0,
+  topClosure: "tuck",
+  bottomClosure: "tuck",
 };
 
 export const MAX_RTE_PARAMS: ReverseTuckEndParams = {
@@ -40,6 +44,8 @@ export const MAX_RTE_PARAMS: ReverseTuckEndParams = {
   dustFlapDepth: 80,
   lockTongueDepth: 28,
   tolerance: 2,
+  topClosure: "glue",
+  bottomClosure: "glue",
 };
 
 export const RTE_PRESETS: Preset[] = [
@@ -60,6 +66,8 @@ export const RTE_PRESETS: Preset[] = [
       height: 34,
       tuckFlapDepth: 28,
       dustFlapDepth: 22,
+      topClosure: "glue",
+      bottomClosure: "tuck",
     },
   },
   {
@@ -75,6 +83,8 @@ export const RTE_PRESETS: Preset[] = [
       glueFlapWidth: 10,
       tuckFlapDepth: 24,
       dustFlapDepth: 19,
+      topClosure: "tuck",
+      bottomClosure: "glue",
     },
   },
 ];
